@@ -7,6 +7,7 @@ val dist: TaskKey[File] = taskKey[File]("Building distribution...")
 val dependencyJars: TaskKey[Seq[(File, String)]] = taskKey("Dependency JARs which aren't included in the assembly")
 val polynoteJars: TaskKey[Seq[(File, String)]] = taskKey("Polynote JARs")
 val sparkVersion: SettingKey[String] = settingKey("Spark version")
+val rapidMinerVersion: SettingKey[String] = settingKey("RapidMiner version")
 
 val versions = new {
   val http4s     = "0.20.6"
@@ -211,7 +212,64 @@ lazy val `polynote-spark` = project.settings(
   `polynote-runtime` % "provided",
   `polynote-runtime` % "test")
 
-lazy val polynote = project.in(file(".")).aggregate(`polynote-runtime`, `polynote-spark-runtime`, `polynote-kernel`, `polynote-server`, `polynote-spark`)
+resolvers += "RapidMiner Repository" at "https://maven.rapidminer.com/content/groups/public/"
+
+resolvers in ThisBuild += "RapidMiner Repository" at "https://maven.rapidminer.com/content/groups/public/"
+
+val rapidMinerSettings = Seq(
+  rapidMinerVersion := "9.5.0",
+  libraryDependencies ++= Seq(
+    "com.rapidminer.studio" % "rapidminer-studio-core" % rapidMinerVersion.value/* % "provided"*//*,
+    "org.apache.spark" %% "spark-repl" % sparkVersion.value % "provided",
+    "org.apache.spark" %% "spark-sql" % sparkVersion.value % "test",
+    "org.apache.spark" %% "spark-repl" % sparkVersion.value % "test"*/
+  )
+)
+
+lazy val `polynote-rapidminer-runtime` = project.settings(
+  commonSettings,
+  rapidMinerSettings,
+  libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
+  )
+) dependsOn `polynote-runtime`
+
+lazy val `polynote-rapidminer` = project.settings(
+  commonSettings,
+  rapidMinerSettings,
+  libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
+    "org.scodec" %% "scodec-stream" % "1.2.0"
+  ),
+  dependencyJars := {
+    (dependencyClasspath in (`polynote-kernel`, Compile)).value.collect {
+      case jar if jar.data.name.matches(".*scala-(library|reflect|compiler|collection-compat|xml).*") =>
+        jar.data -> s"polynote/deps/${jar.data.name}"
+    }
+  },
+  polynoteJars := {
+    val runtimeAssembly  = (assembly in `polynote-runtime`).value
+    val rapidMinerRuntime     = (assembly in `polynote-rapidminer-runtime`).value
+    List(
+      runtimeAssembly -> "polynote/deps/polynote-runtime.jar",
+      rapidMinerRuntime    -> "polynote/deps/polynote-rapidminer-runtime.jar")
+  }/*,
+  assemblyOption in assembly := {
+    (assemblyOption in assembly).value.copy(
+      includeScala = false,
+      prependShellScript = Some(
+        IO.read(file(".") / "scripts/polynote").linesIterator.toSeq
+      ))
+  }*/
+) dependsOn (
+  `polynote-server` % "compile->compile;test->test",
+  `polynote-rapidminer-runtime` % "provided",
+  `polynote-rapidminer-runtime` % "test",
+  `polynote-runtime` % "provided",
+  `polynote-runtime` % "test")
+
+
+lazy val polynote = project.in(file(".")).aggregate(`polynote-runtime`, `polynote-spark-runtime`, `polynote-kernel`, `polynote-server`, `polynote-spark`, `polynote-rapidminer`)
     .settings(
       commonSettings,
       dist := {
