@@ -223,6 +223,10 @@ val rapidMinerSettings = Seq(
     "org.apache.spark" %% "spark-repl" % sparkVersion.value % "provided",
     "org.apache.spark" %% "spark-sql" % sparkVersion.value % "test",
     "org.apache.spark" %% "spark-repl" % sparkVersion.value % "test"*/
+  ),
+  excludeDependencies ++= Seq(
+    ExclusionRule("stax", "stax-api"),
+    ExclusionRule("xmlpull", "xmlpull")
   )
 )
 
@@ -241,17 +245,17 @@ lazy val `polynote-rapidminer` = project.settings(
     "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
     "org.scodec" %% "scodec-stream" % "1.2.0"
   ),
-  dependencyJars := {
-    (dependencyClasspath in (`polynote-kernel`, Compile)).value.collect {
-      case jar if jar.data.name.matches(".*scala-(library|reflect|compiler|collection-compat|xml).*") =>
-        jar.data -> s"polynote/deps/${jar.data.name}"
-    }
-  },
+//  dependencyJars := {
+//    (dependencyClasspath in (`polynote-kernel`, Compile)).value.collect {
+//      case jar if jar.data.name.matches(".*scala-(library|reflect|compiler|collection-compat|xml).*") =>
+//        jar.data -> s"polynote/deps/${jar.data.name}"
+//    }
+//  },
   polynoteJars := {
     val runtimeAssembly  = (assembly in `polynote-runtime`).value
     val rapidMinerRuntime     = (assembly in `polynote-rapidminer-runtime`).value
     List(
-      runtimeAssembly -> "polynote/deps/polynote-runtime.jar",
+      //runtimeAssembly -> "polynote/deps/polynote-runtime.jar",
       rapidMinerRuntime    -> "polynote/deps/polynote-rapidminer-runtime.jar")
   }/*,
   assemblyOption in assembly := {
@@ -273,8 +277,10 @@ lazy val polynote = project.in(file(".")).aggregate(`polynote-runtime`, `polynot
     .settings(
       commonSettings,
       dist := {
-        val jars = ((assembly in (`polynote-spark`, Compile)).value -> "polynote/polynote.jar") +:
-          ((polynoteJars in (`polynote-spark`, Compile)).value ++ (dependencyJars in (`polynote-spark`, Compile)).value)
+        val jars = (((assembly in (`polynote-spark`, Compile)).value -> "polynote/polynote.jar") +:
+          ((polynoteJars in (`polynote-spark`, Compile)).value ++ (dependencyJars in (`polynote-spark`, Compile)).value)) ++
+          (((sbt.Keys.`package` in (`polynote-rapidminer`, Compile)).value -> "polynote/deps/polynote-rapidminer.jar") +:
+            ((polynoteJars in (`polynote-rapidminer`, Compile)).value))
 
         val examples = IO.listFiles(file(".") / "docs" / "examples").map(f => (f, s"polynote/examples/${f.getName}"))
 
