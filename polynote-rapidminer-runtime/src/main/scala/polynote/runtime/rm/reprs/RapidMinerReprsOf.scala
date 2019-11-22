@@ -156,11 +156,11 @@ object RapidMinerReprsOf extends LowPriorityRapidMinerReprsOf {
 
 
   private[polynote] class ExampleSetHandle(
-                                           val handle: Int,
-                                           dataFrame: ExampleSet
+                                            val handle: Int,
+                                            exampleSet: ExampleSet
                                          ) extends StreamingDataRepr.Handle with Serializable {
 
-    private val (structType, encode) = structDataTypeAndEncoder(dataFrame.getAttributes)
+    private val (structType, encode) = structDataTypeAndEncoder(exampleSet.getAttributes)
 
 
     val dataType: DataType = structType
@@ -174,7 +174,7 @@ object RapidMinerReprsOf extends LowPriorityRapidMinerReprsOf {
         new VariableSizeDataFrameDecoder(structType, encode)
       }
 
-      dataFrame.asScala.take(1000000).map(rowToBytes)
+      exampleSet.asScala.take(1000000).map(rowToBytes)
     }
 
     def iterator: Iterator[ByteBuffer] = collectedData.iterator.map(ByteBuffer.wrap)
@@ -187,7 +187,7 @@ object RapidMinerReprsOf extends LowPriorityRapidMinerReprsOf {
         case err: Throwable => Left(err)
       }
 
-      ops.foldLeft(tryEither(dataFrame)) {
+      ops.foldLeft(tryEither(exampleSet)) {
         (dfOrErr, op) => dfOrErr.right.flatMap {
           df => op match {
             case GroupAgg(cols, aggs) => ???
@@ -206,7 +206,7 @@ object RapidMinerReprsOf extends LowPriorityRapidMinerReprsOf {
     }
 
     override def release(): Unit = {
-      dataFrame.cleanup()
+      exampleSet.cleanup()
       super.release()
     }
   }

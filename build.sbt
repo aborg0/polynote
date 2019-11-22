@@ -209,6 +209,8 @@ lazy val `polynote-spark` = project.settings(
   `polynote-server` % "compile->compile;test->test",
   `polynote-spark-runtime` % "provided",
   `polynote-spark-runtime` % "test",
+  `polynote-rapidminer-runtime` % "provided",
+  `polynote-rapidminer-runtime` % "test",
   `polynote-runtime` % "provided",
   `polynote-runtime` % "test")
 
@@ -219,6 +221,7 @@ resolvers in ThisBuild += "RapidMiner Repository" at "https://maven.rapidminer.c
 val rapidMinerSettings = Seq(
   rapidMinerVersion := "9.5.0",
   libraryDependencies ++= Seq(
+    "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided",
     "com.rapidminer.studio" % "rapidminer-studio-core" % rapidMinerVersion.value/* % "provided"*//*,
     "org.apache.spark" %% "spark-repl" % sparkVersion.value % "provided",
     "org.apache.spark" %% "spark-sql" % sparkVersion.value % "test",
@@ -234,7 +237,7 @@ lazy val `polynote-rapidminer-runtime` = project.settings(
   commonSettings,
   rapidMinerSettings,
   libraryDependencies ++= Seq(
-    "org.scala-lang" % "scala-compiler" % scalaVersion.value % "provided"
+    "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided"
   )
 ) dependsOn `polynote-runtime`
 
